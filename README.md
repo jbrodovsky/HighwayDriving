@@ -91,55 +91,25 @@ A really helpful resource for doing this project and creating smooth trajectorie
     cd uWebSockets
     git checkout e94b6e1
     ```
+* Eigen library
 
-## Editor Settings
+## Details
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+I started off researching some previous implementations of this project. I settled on a technique that uses a [spline](https://github.com/udacity/CarND-Path-Planning-Project) and based my submission on that implementation.
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+The car uses a controller visits every point it recieves in the list every .02 seconds. The car should not have an acceleration over 10 m/s^2 or a jerk over 50 m/s^3 in total. This requires that a distance increment be calculated such that the path planner does not exceed these terms or the speed limit. This was determined by specifying three waypoints ahead of the car at intervals of a parameter known as the "safe following distance." From these values a spline was created. This spline was then applied to a single interval of the safe following distance. This yielded a target (x,y) coordinate pair and the distance increment to be covered. This allowed me to interpolate new points over a distance of one interval create a valid path.
 
-## Code Style
+This required incorporation of the sensor fusion data to detemine where the path should go. There were three boolean variables that served as decision flags. The first check was to see if there was a car too close to me and ahead of me in the same lane. This was done by checking the cars Frenent coordinates to make sure that the s was greater than my car, the difference in s is less than or equal to the following distance, and the d was within the bounds of \[4 + 4\*lane, 4\*lane\].
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+The next check was to see if the lane to the left or right of my car was occupied and whether or not it would be valid to change lanes to that lane. There was a lane to left if the current lane minus one was greater than or equal to zero. For a lane to the right: the current lane plus one was less than or equal to two. Then it was checked to see if the detected car was in that lane by comparing the d coordinate similarly as before. If all of these were true, the lane was determined to be occupied or invalid to switch to. 
 
-## Project Instructions and Rubric
+Once these flags were set, a second check was used to determin the action to be taken. The first flag checked was if the detected car was too close. If false and the car's current speed was less than 50 MPH the reference velocity was increased causing the car to speed up. If true the flags checking the left lane, then the right lane were checked. The first one to be true determined the lane to switch to.
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+The simulation was run a few times to tune parameters. First was the incremental value for increasing/decreasing the reference velocity. This was tuned until changes in speed resulted in acceleration and jerk values that were within limits. Next, the following distance was tuned to avoid collisions. Approximately 20m tended to avoid collisions, but resulted in highly jerky movement. 35m was largly safe, but occasionally resulted in collisions in congested traffic. It ended up that 30 m worked best.
+
+## Conclusions
+Using a spline and sensor fusion data with a rough map can be used for successfully defining a path for highway driving. A perfect controller can also make the drive smooth comfortable and safe. One notable problem was the issue with being too close and not having a valid lane to which arose in congested traffic. This led to a yo-yoing effect where the car would speed up, get too close, then need to slow down again. A better behavior would be to simply maintian the safe following distance. This might be best addressed by reworking the simulation to directly control the linear velocity and yaw rate and controlling the systems dynamics as opposed to setting up an explicit path. 
 
 
-## Call for IDE Profiles Pull Requests
 
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
 
